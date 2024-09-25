@@ -25,6 +25,7 @@ motor_group Right_2 = motor_group(Front_Right, Back_Right);
 //Pneumatics Devices
 pneumatics Clamp = pneumatics(Brain.ThreeWirePort.H);
 pneumatics PTO = pneumatics(Brain.ThreeWirePort.G);
+pneumatics Lift = pneumatics(Brain.ThreeWirePort.F);
 
 /*---------------------------------------------------------------------------*/
 /*                             VEXcode Config                                */
@@ -246,6 +247,16 @@ void switchclamp()
   }
 }
 
+void raiselift() 
+{
+  Lift.close();
+}
+
+void lowerlift() 
+{
+  Lift.open();
+}
+
 void activatePTO()
 {
   if (PTO.value() == true) {
@@ -277,12 +288,12 @@ void usercontrol(void) {
     chassis.control_arcade();
     Controller1.ButtonB.pressed(switchclamp);
     Controller1.ButtonA.pressed(activatePTO);
-//Run intake inwards/outwards bound r1,r2
-  if (Controller1.ButtonL1.pressing() == true){
+//Run intake inwards/outwards bound l1,r1
+  if (Controller1.ButtonL1.pressing()){
     Conveyor.spin(forward, 100, percent);
     Intake.spin(reverse, 100, percent);
     Hood.spin(reverse, 100, percent);
-  } else if (Controller1.ButtonR1.pressing() == true){
+  } else if (Controller1.ButtonR1.pressing()){
     Conveyor.spin(reverse, 100, percent);
     Intake.spin(forward, 100, percent);
     Hood.spin(forward, 100, percent);
@@ -292,6 +303,19 @@ void usercontrol(void) {
     Hood.stop(hold);
   }
 
+//Raise/lower lift r2,l2
+  if (Controller1.ButtonR2.pressing()){
+    Left_PTO.spinFor(forward, 2, degrees);
+    Right_PTO.spinFor(forward, 2, degrees);
+    raiselift();
+  } else if (Controller1.ButtonL2.pressing()){
+    Left_PTO.spinFor(reverse, 2, degrees);
+    Right_PTO.spinFor(reverse, 2, degrees);
+    lowerlift();
+  } else {
+    Left_PTO.stop(hold);
+    Right_PTO.stop(hold);
+  }
 
 }
 }
