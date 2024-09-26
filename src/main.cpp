@@ -304,15 +304,15 @@ void usercontrol(void) {
   }
 
 //Raise/lower lift r2,l2
-  if (Controller1.ButtonR2.pressing()){
-    Left_PTO.spinFor(forward, 2, degrees);
-    Right_PTO.spinFor(forward, 2, degrees);
+  if (PTO.value()==true&&Controller1.ButtonR2.pressing()){
+    Left_PTO.spin(forward, 100, pct);
+    Right_PTO.spin(forward, 100, pct);
     raiselift();
-  } else if (Controller1.ButtonL2.pressing()){
-    Left_PTO.spinFor(reverse, 2, degrees);
-    Right_PTO.spinFor(reverse, 2, degrees);
+  } else if (PTO.value()==true&&Controller1.ButtonL2.pressing()){
+    Left_PTO.spin(reverse, 100, pct);
+    Right_PTO.spin(reverse, 100, pct);
     lowerlift();
-  } else {
+  } else if(PTO.value()==true){
     Left_PTO.stop(hold);
     Right_PTO.stop(hold);
   }
