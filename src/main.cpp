@@ -1,4 +1,6 @@
 #include "vex.h"
+#include <string>
+#include <math.h>
 
 using namespace vex;
 competition Competition;
@@ -21,11 +23,24 @@ motor_group Left_3 = motor_group(Front_Left, Back_Left, Left_PTO);
 motor_group Right_3 = motor_group(Front_Right, Back_Right, Right_PTO);
 motor_group Left_2 = motor_group(Front_Left, Back_Left);
 motor_group Right_2 = motor_group(Front_Right, Back_Right);
+rotation right_encoder = rotation(PORT14);
+rotation left_encoder = rotation(PORT15);
 
 //Pneumatics Devices
 pneumatics Clamp = pneumatics(Brain.ThreeWirePort.H);
 pneumatics PTO = pneumatics(Brain.ThreeWirePort.G);
 pneumatics Lift = pneumatics(Brain.ThreeWirePort.F);
+
+double left_delta = 0;
+double right_delta = 0;
+double old_left = 0;
+double old_right = 0;
+double left_lift_angle = 0;
+double right_lift_angle = 0;
+int liftstage = 0;
+
+bool liftchanged = false;
+bool liftchanged2 = false;
 
 /*---------------------------------------------------------------------------*/
 /*                             VEXcode Config                                */
@@ -143,41 +158,47 @@ bool auto_started = false;
 
 void pre_auton() {
   // Initializing Robot Configuration. DO NOT REMOVE!
+  left_encoder.resetPosition();
+  right_encoder.resetPosition();
+  left_encoder.setPosition(0,degrees);
+  right_encoder.setPosition(0,degrees);
+  left_lift_angle = 0;
+  right_lift_angle = 0;
   vexcodeInit();
   default_constants();
 
   while(!auto_started){
-    Brain.Screen.clearScreen();
-    Brain.Screen.printAt(5, 20, "JAR Template v1.2.0");
-    Brain.Screen.printAt(5, 40, "Battery Percentage:");
-    Brain.Screen.printAt(5, 60, "%d", Brain.Battery.capacity());
-    Brain.Screen.printAt(5, 80, "Chassis Heading Reading:");
-    Brain.Screen.printAt(5, 100, "%f", chassis.get_absolute_heading());
-    Brain.Screen.printAt(5, 120, "Selected Auton:");
+    //Brain.Screen.clearScreen();
+    //Brain.Screen.printAt(5, 20, "JAR Template v1.2.0");
+    //Brain.Screen.printAt(5, 40, "Battery Percentage:");
+    //Brain.Screen.printAt(5, 60, "%d", Brain.Battery.capacity());
+    //Brain.Screen.printAt(5, 80, "Chassis Heading Reading:");
+    //Brain.Screen.printAt(5, 100, "%f", chassis.get_absolute_heading());
+    //Brain.Screen.printAt(5, 120, "Selected Auton:");
     switch(current_auton_selection){
       case 0:
-        Brain.Screen.printAt(5, 140, "Auton 1");
+        //Brain.Screen.printAt(5, 140, "Auton 1");
         break;
       case 1:
-        Brain.Screen.printAt(5, 140, "Auton 2");
+        //Brain.Screen.printAt(5, 140, "Auton 2");
         break;
       case 2:
-        Brain.Screen.printAt(5, 140, "Auton 3");
+        //Brain.Screen.printAt(5, 140, "Auton 3");
         break;
       case 3:
-        Brain.Screen.printAt(5, 140, "Auton 4");
+        //Brain.Screen.printAt(5, 140, "Auton 4");
         break;
       case 4:
-        Brain.Screen.printAt(5, 140, "Auton 5");
+        //Brain.Screen.printAt(5, 140, "Auton 5");
         break;
       case 5:
-        Brain.Screen.printAt(5, 140, "Auton 6");
+        //Brain.Screen.printAt(5, 140, "Auton 6");
         break;
       case 6:
-        Brain.Screen.printAt(5, 140, "Auton 7");
+        //Brain.Screen.printAt(5, 140, "Auton 7");
         break;
       case 7:
-        Brain.Screen.printAt(5, 140, "Auton 8");
+        //Brain.Screen.printAt(5, 140, "Auton 8");
         break;
     }
     if(Brain.Screen.pressing()){
@@ -270,10 +291,76 @@ void activatePTO()
   }
 }
 
+double delta_helper(double val1,  double val2)
+{
+  if(val1>val2)
+  {
+    if(fabs(val1-val2) < fabs((360-val1)+val2))
+    {
+      return val1-val2;
+    }
+    else
+    {
+      return -((360-val1)+val2);
+    }
+  }
+  else if(val2>=val1)
+  {
+    if(fabs(val2-val1) < fabs((360-val2)+val1))
+    {
+      return -(val2-val1);
+    }
+    else
+    {
+      return ((360-val2)+val1);
+    }
+  }
+  return 0;
+}
+
+void calculate_change()
+{
+    left_delta = delta_helper(left_encoder.angle(),old_left);
+    right_delta = delta_helper(right_encoder.angle(),old_right);
+    old_left = left_encoder.angle();
+    old_right = right_encoder.angle();
+    left_lift_angle += left_delta/12;
+    right_lift_angle += right_delta/12;
+}
+
+void raiseLift()
+{
+  if(liftstage<=1)
+  {
+    liftstage ++;
+  }
+}
+
+void lowerLift()
+{
+  if(liftstage > 0)
+  {
+    liftstage --;
+  }
+}
+
 void usercontrol(void) {
   // User control code here, inside the loop
-  Brain.Screen.print("Hi Carleigh");
+  //Brain.Screen.print("Hi Carleigh");
+  calculate_change();
+  left_lift_angle = 0;
+  right_lift_angle = 0;
+  wait(100,msec);
   while (1) {
+    calculate_change();
+    Brain.Screen.print("Left Encoder: ");
+    Brain.Screen.print(left_lift_angle);
+    Brain.Screen.print("\n");
+    Brain.Screen.print("Right Encoder: ");
+    Brain.Screen.print(right_lift_angle);
+    Brain.Screen.print("\n");
+    wait(20,msec);
+    Brain.Screen.clearLine();
     // This is the main execution loop for the user control program.
     // Each time through the loop your program should update motor + servo
     // values based on feedback from the joysticks.
@@ -317,6 +404,101 @@ void usercontrol(void) {
     Right_PTO.stop(hold);
   }
 
+  if(Controller1.ButtonUp.pressing()&&!liftchanged&&liftstage<2)
+  {
+    liftstage++;
+    liftchanged = true;
+  }
+  else if(!Controller1.ButtonUp.pressing())
+  {
+    liftchanged = false;
+  }
+  
+  if(Controller1.ButtonDown.pressing()&&!liftchanged2&&liftstage>0)
+  {
+    liftstage--;
+    liftchanged2 = true;
+  }
+  else if(!Controller1.ButtonDown.pressing())
+  {
+    liftchanged2 = false;
+  }
+
+  Brain.Screen.print(liftstage);
+
+  if(liftstage == 0&&PTO.value()==true)
+  {
+    while(fabs(left_lift_angle-0)>15)
+    {
+      calculate_change();
+      Left_PTO.spin(forward,100,pct);
+      Right_PTO.spin(forward,100,pct);
+      Brain.Screen.print("Left Encoder: ");
+      Brain.Screen.print(left_lift_angle);
+      Brain.Screen.print("\n");
+      Brain.Screen.print("Right Encoder: ");
+      Brain.Screen.print(right_lift_angle);
+      Brain.Screen.print("\n");
+      wait(20,msec);
+      Brain.Screen.clearLine();
+    }
+    
+  }
+  else if(liftstage == 2&&PTO.value()==true)
+  {
+    while(left_lift_angle>-115)
+    {
+      calculate_change();
+      Left_PTO.spin(reverse,100,pct);
+      Right_PTO.spin(reverse,100,pct);
+      Brain.Screen.print("Left Encoder: ");
+      Brain.Screen.print(left_lift_angle);
+      Brain.Screen.print("\n");
+      Brain.Screen.print("Right Encoder: ");
+      Brain.Screen.print(right_lift_angle);
+      Brain.Screen.print("\n");
+      wait(20,msec);
+      Brain.Screen.clearLine();
+    }
+  }
+  else if(liftstage == 1&&PTO.value()==true)
+  {
+    if(left_lift_angle>-55)
+    {
+      while(left_lift_angle>-40)
+      {
+        calculate_change();
+        Left_PTO.spin(reverse,100,pct);
+        Right_PTO.spin(reverse,100,pct);
+        Brain.Screen.print("Left Encoder: ");
+        Brain.Screen.print(left_lift_angle);
+        Brain.Screen.print("\n");
+        Brain.Screen.print("Right Encoder: ");
+        Brain.Screen.print(right_lift_angle);
+        Brain.Screen.print("\n");
+        wait(20,msec);
+        Brain.Screen.clearLine();
+      }
+    }
+    else if(left_lift_angle<-55)
+    {
+      while(left_lift_angle<-70)
+      {
+        calculate_change();
+        Left_PTO.spin(forward,100,pct);
+        Right_PTO.spin(forward,100,pct);
+        Brain.Screen.print("Left Encoder: ");
+        Brain.Screen.print(left_lift_angle);
+        Brain.Screen.print("\n");
+        Brain.Screen.print("Right Encoder: ");
+        Brain.Screen.print(right_lift_angle);
+        Brain.Screen.print("\n");
+        wait(20,msec);
+        Brain.Screen.clearLine();
+      }
+    }
+  }
+
 }
 }
 
@@ -327,9 +509,6 @@ void usercontrol(void) {
 //
 int main() {
   // Set up callbacks for autonomous and driver control periods.
-  Competition.autonomous(autonomous);
-  Competition.drivercontrol(usercontrol);
-
   // Run the pre-autonomous function.
   pre_auton();
 
