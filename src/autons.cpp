@@ -127,3 +127,8 @@ void holonomic_odom_test(){
   chassis.holonomic_drive_to_pose(0, 18, 270);
   chassis.holonomic_drive_to_pose(0, 0, 0);
 }
+
+void carleighs_auton() {
+  chassis.drive_distance(30);
+  chassis.turn_to_angle(30);
+}

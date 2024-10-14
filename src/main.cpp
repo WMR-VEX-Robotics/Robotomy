@@ -5,14 +5,15 @@
 using namespace vex;
 competition Competition;
 
+
 //hello
 brain Brain;
 //Other devices:
 controller Controller1 = controller(primary);
 //Motor Devices
-motor Intake = motor(PORT6, ratio18_1, true);
+motor Intake = motor(PORT6, ratio18_1, false);
 motor Conveyor = motor(PORT16, ratio18_1, true);
-motor Hood = motor(PORT3, ratio18_1, true);
+motor Hood = motor(PORT3, ratio18_1, false);
 motor Front_Left = motor(PORT10, ratio18_1, true);
 motor Front_Right = motor(PORT9, ratio18_1, false);
 motor Back_Left = motor(PORT18, ratio18_1, true);
@@ -25,6 +26,7 @@ motor_group Left_2 = motor_group(Front_Left, Back_Left);
 motor_group Right_2 = motor_group(Front_Right, Back_Right);
 rotation right_encoder = rotation(PORT14);
 rotation left_encoder = rotation(PORT15);
+optical Ring_Color = optical(PORT2);
 
 //Pneumatics Devices
 pneumatics Clamp = pneumatics(Brain.ThreeWirePort.H);
@@ -41,6 +43,16 @@ int liftstage = 0;
 
 bool liftchanged = false;
 bool liftchanged2 = false;
+double right_encoder_position = right_encoder.angle();
+double left_encoder_position = left_encoder.angle();
+
+
+enum TeamColor {
+  Red,
+  Blue,
+};
+
+TeamColor team = Red;
 
 /*---------------------------------------------------------------------------*/
 /*                             VEXcode Config                                */
@@ -222,7 +234,8 @@ void autonomous(void) {
   auto_started = true;
   switch(current_auton_selection){ 
     case 0:
-      //drive_test();
+      chassis.drive_distance(30);
+      chassis.turn_to_angle(30);
       break;
     case 1:         
       drive_test();
@@ -375,6 +388,15 @@ void usercontrol(void) {
     chassis.control_arcade();
     Controller1.ButtonB.pressed(switchclamp);
     Controller1.ButtonA.pressed(activatePTO);
+    right_encoder_position = right_encoder.angle();
+    left_encoder_position = left_encoder.angle();
+    if ((right_encoder_position < 5 && right_encoder_position > -5) || (left_encoder_position < 5 && left_encoder_position > -5)) {
+    if (Ring_Color.color() == team) {
+      Conveyor.setVelocity(70, percent);
+      } else {
+        Conveyor.setVelocity(100, percent);
+      }
+    }
 //Run intake inwards/outwards bound l1,r1
   if (Controller1.ButtonL1.pressing()){
     Conveyor.spin(forward, 100, percent);
@@ -404,102 +426,8 @@ void usercontrol(void) {
     Right_PTO.stop(hold);
   }
 
-  if(Controller1.ButtonUp.pressing()&&!liftchanged&&liftstage<2)
-  {
-    liftstage++;
-    liftchanged = true;
-  }
-  else if(!Controller1.ButtonUp.pressing())
-  {
-    liftchanged = false;
-  }
-  
-  if(Controller1.ButtonDown.pressing()&&!liftchanged2&&liftstage>0)
-  {
-    liftstage--;
-    liftchanged2 = true;
-  }
-  else if(!Controller1.ButtonDown.pressing())
-  {
-    liftchanged2 = false;
   }
 
-  Brain.Screen.print(liftstage);
-
-  if(liftstage == 0&&PTO.value()==true)
-  {
-    while(fabs(left_lift_angle-0)>15)
-    {
-      calculate_change();
-      Left_PTO.spin(forward,100,pct);
-      Right_PTO.spin(forward,100,pct);
-      Brain.Screen.print("Left Encoder: ");
-      Brain.Screen.print(left_lift_angle);
-      Brain.Screen.print("\n");
-      Brain.Screen.print("Right Encoder: ");
-      Brain.Screen.print(right_lift_angle);
-      Brain.Screen.print("\n");
-      wait(20,msec);
-      Brain.Screen.clearLine();
-    }
-    
-  }
-  else if(liftstage == 2&&PTO.value()==true)
-  {
-    while(left_lift_angle>-115)
-    {
-      calculate_change();
-      Left_PTO.spin(reverse,100,pct);
-      Right_PTO.spin(reverse,100,pct);
-      Brain.Screen.print("Left Encoder: ");
-      Brain.Screen.print(left_lift_angle);
-      Brain.Screen.print("\n");
-      Brain.Screen.print("Right Encoder: ");
-      Brain.Screen.print(right_lift_angle);
-      Brain.Screen.print("\n");
-      wait(20,msec);
-      Brain.Screen.clearLine();
-    }
-  }
-  else if(liftstage == 1&&PTO.value()==true)
-  {
-    if(left_lift_angle>-55)
-    {
-      while(left_lift_angle>-40)
-      {
-        calculate_change();
-        Left_PTO.spin(reverse,100,pct);
-        Right_PTO.spin(reverse,100,pct);
-        Brain.Screen.print("Left Encoder: ");
-        Brain.Screen.print(left_lift_angle);
-        Brain.Screen.print("\n");
-        Brain.Screen.print("Right Encoder: ");
-        Brain.Screen.print(right_lift_angle);
-        Brain.Screen.print("\n");
-        wait(20,msec);
-        Brain.Screen.clearLine();
-      }
-    }
-    else if(left_lift_angle<-55)
-    {
-      while(left_lift_angle<-70)
-      {
-        calculate_change();
-        Left_PTO.spin(forward,100,pct);
-        Right_PTO.spin(forward,100,pct);
-        Brain.Screen.print("Left Encoder: ");
-        Brain.Screen.print(left_lift_angle);
-        Brain.Screen.print("\n");
-        Brain.Screen.print("Right Encoder: ");
-        Brain.Screen.print(right_lift_angle);
-        Brain.Screen.print("\n");
-        wait(20,msec);
-        Brain.Screen.clearLine();
-      }
-    }
-  }
-
-}
 }
 
 
@@ -511,7 +439,8 @@ int main() {
   // Set up callbacks for autonomous and driver control periods.
   // Run the pre-autonomous function.
   pre_auton();
-
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
   // Prevent main from exiting with an infinite loop.
   while (true) {
     wait(100, msec);
