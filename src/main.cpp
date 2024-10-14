@@ -45,14 +45,9 @@ bool liftchanged = false;
 bool liftchanged2 = false;
 double right_encoder_position = right_encoder.angle();
 double left_encoder_position = left_encoder.angle();
+int Ring = Ring_Color.hue();
+bool team = true; // true is red, false is blue
 
-
-enum TeamColor {
-  Red,
-  Blue,
-};
-
-TeamColor team = Red;
 
 /*---------------------------------------------------------------------------*/
 /*                             VEXcode Config                                */
@@ -391,10 +386,21 @@ void usercontrol(void) {
     right_encoder_position = right_encoder.angle();
     left_encoder_position = left_encoder.angle();
     if ((right_encoder_position < 5 && right_encoder_position > -5) || (left_encoder_position < 5 && left_encoder_position > -5)) {
-    if (Ring_Color.color() == team) {
-      Conveyor.setVelocity(70, percent);
-      } else {
-        Conveyor.setVelocity(100, percent);
+      if (team == true) {
+        if (Ring_Color.color() == red) {
+          Conveyor.setVelocity(0, percent);
+          Brain.Screen.print("Hello");
+          } else {
+           Conveyor.setVelocity(100, percent);
+           Brain.Screen.print("YO");
+        }
+      }
+      else{
+        if (Ring_Color.color() == blue) {
+          Conveyor.setVelocity(0, percent);
+          } else {
+           Conveyor.setVelocity(100, percent);
+        }
       }
     }
 //Run intake inwards/outwards bound l1,r1
